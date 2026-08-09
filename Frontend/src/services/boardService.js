@@ -6,6 +6,16 @@ export const getBoards = async () => {
   return res.data;
 };
 
+export const getBoard = async (boardId) => {
+  const res = await API.get(`/boards/${boardId}`);
+  return res.data;
+};
+
+export const joinBoard = async (roomId) => {
+  const res = await API.post("/boards/join", { roomId });
+  return res.data;
+};
+
 // 🔹 CREATE BOARD
 export const createBoard = async (data) => {
   const res = await API.post("/boards", data);

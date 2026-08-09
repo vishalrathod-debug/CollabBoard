@@ -1,3 +1,6 @@
+const Board = require("../models/Board");
+const BoardUserMeta = require("../models/BoardUserMeta");
+
 const deleteUserInBoard = async (req, res) => {
   try {
     const currentUserId = req.user.id;

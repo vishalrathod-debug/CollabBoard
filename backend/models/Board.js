@@ -40,6 +40,11 @@ const boardSchema = new mongoose.Schema(
       type: Buffer,
       default: null,
     },
+
+    canvasState: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({ objects: [] }),
+    },
   },
   { timestamps: true }
 );

@@ -8,7 +8,6 @@ const { getYDoc } = require("./yjsStore");
 const { handleYjsUpdate } = require("./handlers/yjsHandler");
 const { addUser, removeUser, getUsers } = require("./presence");
 
-
 // ==============================
 // 🔥 RATE LIMIT
 // ==============================
@@ -35,99 +34,71 @@ function isRateLimited(socketId) {
   return data.count > MAX_EVENTS_PER_SEC;
 }
 
-
 // ==============================
 // 🔐 AUTH
 // ==============================
 function authenticateSocket(socket) {
   try {
     const token = socket.handshake.auth?.token;
-
     if (!token) throw new Error("No token");
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     return decoded.id;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
 
-
 // ==============================
-// 🔥 MAIN SOCKET HANDLER
+// 🚀 MAIN SOCKET HANDLER
 // ==============================
 module.exports = (socket, io) => {
   console.log("⚡ Connected:", socket.id);
 
-  // 🔐 AUTHENTICATION
   const userId = authenticateSocket(socket);
 
   if (!userId) {
-    socket.emit("error", {
-      message: "Unauthorized",
-      code: "AUTH_FAILED",
-    });
+    socket.emit("error", { message: "Unauthorized" });
     socket.disconnect();
     return;
   }
 
   socket.userId = userId;
 
-
-  // =====================================
+  // ==============================
   // 🔥 JOIN BOARD
-  // =====================================
+  // ==============================
   socket.on("join-board", async ({ boardId, name }) => {
     try {
-      if (!boardId) {
-        return socket.emit("error", {
-          message: "BoardId required",
-        });
-      }
+      if (!boardId) return;
 
-      // 🔹 Check board exists
       const board = await Board.findById(boardId);
       if (!board) {
-        return socket.emit("error", {
-          message: "Board not found",
-        });
+        return socket.emit("error", { message: "Board not found" });
       }
 
-      // 🔹 Check access
       const meta = await BoardUserMeta.findOne({
         boardId,
         userId: socket.userId,
       });
 
       if (!meta) {
-        return socket.emit("error", {
-          message: "Access denied",
-        });
+        return socket.emit("error", { message: "Access denied" });
       }
 
       socket.join(boardId);
 
       const ydoc = getYDoc(boardId);
 
-      // 🔹 Load DB state (only once)
-      if (ydoc.getStateVector().length === 0) {
-        if (board.documentState) {
-          Y.applyUpdate(
-            ydoc,
-            new Uint8Array(board.documentState)
-          );
-        }
+      if (board.documentState) {
+        Y.applyUpdate(ydoc, new Uint8Array(board.documentState));
       }
 
-      // 🔹 Send full state
       const state = Y.encodeStateAsUpdate(ydoc);
-      socket.emit("yjs-init", state);
 
-      // 🔹 Presence
+      socket.emit("yjs-init", state);
+      socket.emit("canvas-init", board.canvasState || { objects: [] });
+
       addUser(boardId, {
         userId: socket.userId,
         name,
@@ -135,22 +106,15 @@ module.exports = (socket, io) => {
         socketId: socket.id,
       });
 
-      socket.emit("presence-update", getUsers(boardId));
-      socket.to(boardId).emit("presence-update", getUsers(boardId));
-
+      io.to(boardId).emit("presence-update", getUsers(boardId));
     } catch (err) {
       console.error("Join error:", err.message);
-
-      socket.emit("error", {
-        message: "Failed to join board",
-      });
     }
   });
 
-
-  // =====================================
+  // ==============================
   // 🔥 YJS UPDATE
-  // =====================================
+  // ==============================
   socket.on("yjs-update", async (payload) => {
     try {
       if (isRateLimited(socket.id)) return;
@@ -163,26 +127,44 @@ module.exports = (socket, io) => {
         userId: socket.userId,
       });
 
-      if (!meta || meta.role === "viewer") {
-        return socket.emit("error", {
-          message: "No edit permission",
-        });
-      }
+      if (!meta || meta.role === "viewer") return;
 
       handleYjsUpdate(socket, payload);
-
     } catch (err) {
-      console.error("Update error:", err.message);
+      console.error("YJS error:", err.message);
     }
   });
 
+  // ==============================
+  // 🔥 CANVAS UPDATE
+  // ==============================
+  socket.on("canvas-update", async ({ boardId, state }) => {
+    try {
+      if (!boardId || !state) return;
+      if (isRateLimited(socket.id)) return;
 
-  // =====================================
+      const meta = await BoardUserMeta.findOne({
+        boardId,
+        userId: socket.userId,
+      });
+
+      if (!meta || meta.role === "viewer") return;
+
+      await Board.findByIdAndUpdate(boardId, {
+        canvasState: state,
+      });
+
+      socket.to(boardId).emit("canvas-update", state);
+    } catch (err) {
+      console.error("Canvas error:", err.message);
+    }
+  });
+
+  // ==============================
   // 🔥 CURSOR MOVE
-  // =====================================
+  // ==============================
   socket.on("cursor-move", ({ boardId, x, y }) => {
     if (!boardId) return;
-
     if (isRateLimited(socket.id)) return;
 
     socket.to(boardId).emit("cursor-move", {
@@ -192,42 +174,46 @@ module.exports = (socket, io) => {
     });
   });
 
+  // ==============================
+  // 🔥 CHAT
+  // ==============================
+  socket.on("chat-message", ({ boardId, message }) => {
+    if (!boardId || !message) return;
 
-  // =====================================
+    socket.to(boardId).emit("chat-message", {
+      id: `${socket.id}-${Date.now()}`,
+      author: socket.userId,
+      message: message.trim().slice(0, 500),
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  // ==============================
   // 🔥 LEAVE BOARD
-  // =====================================
+  // ==============================
   socket.on("leave-board", ({ boardId }) => {
     if (!boardId) return;
 
     socket.leave(boardId);
-
     removeUser(socket.id);
 
-    socket.to(boardId).emit(
-      "presence-update",
-      getUsers(boardId)
-    );
+    io.to(boardId).emit("presence-update", getUsers(boardId));
   });
 
-
-  // =====================================
+  // ==============================
   // 🔥 DISCONNECT
-  // =====================================
-  socket.on("disconnect", () => {
-    console.log("❌ Disconnected:", socket.id);
+  // ==============================
+  socket.on("disconnecting", () => {
+    console.log("❌ Disconnect:", socket.id);
+
+    const rooms = Array.from(socket.rooms);
 
     removeUser(socket.id);
-
-    delete rateLimitMap[socket.id]; // 🔥 FIX MEMORY LEAK
-
-    const rooms = [...socket.rooms];
+    delete rateLimitMap[socket.id];
 
     rooms.forEach((room) => {
       if (room !== socket.id) {
-        socket.to(room).emit(
-          "presence-update",
-          getUsers(room)
-        );
+        socket.to(room).emit("presence-update", getUsers(room));
       }
     });
   });

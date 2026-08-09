@@ -6,6 +6,7 @@ import { Login } from "../pages/auth/Login";
 import LandingPage from "../pages/LandingPage";
 import { AuthContext } from "../context/AuthContext";
 import BoardRoom from "../pages/board/BoardRoom";
+import JoinBoardPage from "../pages/JoinBoardPage";
 
 
 // 🔐 Protected Route
@@ -44,6 +45,7 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/join" element={<ProtectedRoute><JoinBoardPage /></ProtectedRoute>} />
 
       {/* ❌ Fallback */}
       <Route path="*" element={<Navigate to="/" />} />

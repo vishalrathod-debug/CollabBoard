@@ -1,7 +1,6 @@
-import { createContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { connectSocket, disconnectSocket } from "../services/socketService";
-
-export const SocketContext = createContext(null);
+import { SocketContext } from "./SocketContext.js";
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
@@ -12,10 +11,13 @@ export const SocketProvider = ({ children }) => {
     if (!token) return;
 
     const newSocket = connectSocket(token);
-    setSocket(newSocket);
+    const handleConnect = () => setSocket(newSocket);
+    newSocket.on("connect", handleConnect);
 
     return () => {
       disconnectSocket();
+      newSocket.off("connect", handleConnect);
+      setSocket(null);
     };
   }, []);
 

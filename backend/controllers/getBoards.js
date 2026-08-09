@@ -12,7 +12,7 @@ const getBoards = async (req, res) => {
     // 🔹 Step 2: format response
     const boards = relations.map((item) => {
       return {
-        id: item.boardId._id,
+        _id: item.boardId._id,
         title: item.boardId.title,
         roomId: item.boardId.roomId,
         role: item.role,

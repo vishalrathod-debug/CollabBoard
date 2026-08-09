@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import BoardList from "./BoardList";
 import CreateBoardModal from "../../components/modals/CreateBoardModal";
 import { deleteBoard, getBoards, toggleStarBoard, updateBoard } from "../../services/boardService";
 import logo from "../../assets/collablogo-removebg-preview.png";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import {
   LayoutGrid,
   Users,
@@ -12,10 +13,12 @@ import {
   LogOut,
   ChevronRight,
   Zap,
+  DoorOpen,
 } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
 
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +92,7 @@ const handleStar = async (id) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     navigate("/login");
   };
 
@@ -152,6 +155,7 @@ const handleStar = async (id) => {
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="flex justify-between mb-6">
           <h1 className="text-xl font-bold">My Boards</h1>
+          <button onClick={() => navigate("/join")} className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"><DoorOpen className="h-4 w-4" />Join board</button>
         </div>
 
         <BoardList

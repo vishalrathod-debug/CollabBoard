@@ -10,6 +10,9 @@ const invite = require("../controllers/invite");
 const getBoardUser = require("../controllers/getBoardUser");
 const updateUserInBoard = require("../controllers/updateUserInBoard");
 const deleteUserInBoard = require("../controllers/deleteUserBoard");
+const updateBoard = require("../controllers/updateBoard");
+const deleteBoard = require("../controllers/deleteBoard");
+const toggleStarBoard = require("../controllers/toggleStarBoard");
 
 
 // Option B: If exported from a single boardController file
@@ -22,16 +25,17 @@ boardRouter.post("/", authMiddleware, createBoard);
 
 // POST /api/boards/join -> Join an existing board via Room ID
 boardRouter.post("/join", authMiddleware, joinBoard);
+boardRouter.post("/invite", authMiddleware, invite);
 // GET /api/boards
 boardRouter.get("/", authMiddleware, getBoards);
-//GET /api/boards/:id
-boardRouter.get('/:id',authMiddleware,getBoardById)
+boardRouter.patch('/:id', authMiddleware, updateBoard);
+boardRouter.patch('/:id/star', authMiddleware, toggleStarBoard);
+boardRouter.delete('/:id', authMiddleware, deleteBoard);
 
 // GET /api/boards/:id/users
-boardRouter.get('/:id',authMiddleware,getBoardUser)
-
-// POST /api/boards/invite
-boardRouter.get('/invite',authMiddleware,invite)
+boardRouter.get('/:id/users', authMiddleware, getBoardUser);
+// GET /api/boards/:id
+boardRouter.get('/:id', authMiddleware, getBoardById);
 
 // PATCH /api/boards/:boardId/users/:userId
 boardRouter.patch('/:boardId/users/:userId',authMiddleware,updateUserInBoard)
