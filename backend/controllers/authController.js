@@ -21,9 +21,8 @@ const generateToken = (userId) => {
 // ==============================
 exports.signup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    let { name, email, password } = req.body;
 
-    // 🔹 Basic validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -38,8 +37,10 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // 🔹 Check existing user
+    email = email.toLowerCase();
+
     const existingUser = await User.findOne({ email });
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -47,8 +48,18 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // 🔹 Create user
-    const user = await User.create({ name, email, password });
+    let user;
+    try {
+      user = await User.create({ name, email, password });
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already exists",
+        });
+      }
+      throw err;
+    }
 
     const token = generateToken(user._id);
 
@@ -64,11 +75,11 @@ exports.signup = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Signup Error:", error.message);
+    console.error("🔥 FULL Signup Error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: error.message,
     });
   }
 };

@@ -1,9 +1,11 @@
+import AppRoutes from "./app/routes"
+
 
 function App() {
 
   return (
     <>
-      <h1 className="bg-amber-200">Welcome</h1>
+      <AppRoutes />
     </>
   )
 }
