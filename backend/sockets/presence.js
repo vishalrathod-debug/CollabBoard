@@ -1,72 +1,88 @@
 // ==============================
-// 🔥 IN-MEMORY PRESENCE STORE
+// 🔥 IN-MEMORY PRESENCE STORE (OPTIMIZED)
 // ==============================
 
-const boardUsers = {}; 
-// structure:
-// {
-//   boardId: [
-//     { userId, name, role, socketId }
-//   ]
-// }
+// boardId -> { userId: { userId, name, role, socketId } }
+const boardUsers = {};
 
+// socketId -> boardId
+const socketToBoard = {};
 
 // ==============================
 // 🔥 ADD USER
 // ==============================
 function addUser(boardId, user) {
-  if (!boardId || !user || !user.socketId) return;
+  if (!boardId || !user || !user.socketId || !user.userId) return;
 
+  // create board entry if not exists
   if (!boardUsers[boardId]) {
-    boardUsers[boardId] = [];
+    boardUsers[boardId] = {};
   }
 
-  // ❌ prevent duplicate socket entries
-  const exists = boardUsers[boardId].some(
-    (u) => u.socketId === user.socketId
-  );
+  // 🔥 prevent duplicate USER (not socket)
+  boardUsers[boardId][user.userId] = {
+    userId: user.userId,
+    name: user.name,
+    role: user.role,
+    socketId: user.socketId,
+  };
 
-  if (!exists) {
-    boardUsers[boardId].push(user);
-  }
+  // 🔥 map socket → board
+  socketToBoard[user.socketId] = boardId;
 }
 
-
 // ==============================
-// 🔥 REMOVE USER
+// 🔥 REMOVE USER (O(1))
 // ==============================
 function removeUser(socketId) {
   if (!socketId) return;
 
+  const boardId = socketToBoard[socketId];
+  if (!boardId || !boardUsers[boardId]) return;
+
+  const users = boardUsers[boardId];
+
+  // 🔥 find user by socketId
+  for (const userId in users) {
+    if (users[userId].socketId === socketId) {
+      delete users[userId];
+      break;
+    }
+  }
+
+  // 🔥 clean mapping
+  delete socketToBoard[socketId];
+
+  // 🔥 remove empty board
+  if (Object.keys(boardUsers[boardId]).length === 0) {
+    delete boardUsers[boardId];
+  }
+}
+
+// ==============================
+// 🔥 GET USERS (ARRAY FOR UI)
+// ==============================
+function getUsers(boardId) {
+  if (!boardId || !boardUsers[boardId]) return [];
+
+  return Object.values(boardUsers[boardId]);
+}
+
+// ==============================
+// 🔥 OPTIONAL: CLEANUP (SAFETY)
+// ==============================
+function cleanupEmptyBoards() {
   for (const boardId in boardUsers) {
-    const users = boardUsers[boardId];
-
-    const updatedUsers = users.filter(
-      (user) => user.socketId !== socketId
-    );
-
-    if (updatedUsers.length !== users.length) {
-      boardUsers[boardId] = updatedUsers;
-
-      // 🔥 CLEAN EMPTY ROOM (VERY IMPORTANT)
-      if (boardUsers[boardId].length === 0) {
-        delete boardUsers[boardId];
-      }
+    if (Object.keys(boardUsers[boardId]).length === 0) {
+      delete boardUsers[boardId];
     }
   }
 }
 
+// run every 60 sec (optional safety)
+setInterval(cleanupEmptyBoards, 60000);
 
 // ==============================
-// 🔥 GET USERS IN BOARD
-// ==============================
-function getUsers(boardId) {
-  if (!boardId) return [];
-
-  return boardUsers[boardId] || [];
-}
-
-
 module.exports = {
   addUser,
   removeUser,

@@ -41,7 +41,10 @@ app.use(express.json());
 // ==============================
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/boards", require("./routes/boardRoutes"));
-
+app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/team", require("./routes/teamRoutes"));
+app.use("/api/activity", require("./routes/activityRoutes"));
+app.use("/api/sessions", require("./routes/sessionRoutes"));
 // ==============================
 // 🔹 HEALTH CHECK
 // ==============================

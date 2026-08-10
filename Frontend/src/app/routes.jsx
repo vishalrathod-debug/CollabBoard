@@ -7,6 +7,9 @@ import LandingPage from "../pages/LandingPage";
 import { AuthContext } from "../context/AuthContext";
 import BoardRoom from "../pages/board/BoardRoom";
 import JoinBoardPage from "../pages/JoinBoardPage";
+import Settings from "../pages/settings/Settings";
+import TeamMembers from "../pages/team/TeamMembers";
+import BoardActivity from "../components/board/BoardActivity"
 
 
 // 🔐 Protected Route
@@ -46,6 +49,9 @@ export default function AppRoutes() {
         }
       />
       <Route path="/join" element={<ProtectedRoute><JoinBoardPage /></ProtectedRoute>} />
+      <Route path="/Settings" element={<ProtectedRoute><Settings/></ProtectedRoute>} />
+      <Route path="/teamMembers" element={<ProtectedRoute><TeamMembers/></ProtectedRoute>} />
+      <Route path="/board/:id/activity" element={<ProtectedRoute><BoardActivity /></ProtectedRoute>} />
 
       {/* ❌ Fallback */}
       <Route path="*" element={<Navigate to="/" />} />

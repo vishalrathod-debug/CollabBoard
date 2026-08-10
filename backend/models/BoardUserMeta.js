@@ -17,10 +17,10 @@ const boardUserMetaSchema = new mongoose.Schema(
     },
 
     role: {
-      type: String,
-      enum: ["admin", "editor", "viewer"],
-      default: "editor",
-    },
+  type: String,
+  enum: ["owner", "admin", "editor", "viewer"],
+  default: "viewer",
+},
 
     isStarred: {
       type: Boolean,
